@@ -21,6 +21,13 @@ async function run() {
         const userCollection = client.db('pc-components-manufacturer').collection('users');
         const orderCollection = client.db('pc-components-manufacturer').collection('orders');
 
+        app.get('/products', async (req, res) => {
+            const query = {};
+            const cursor = productCollection.find(query);
+            const products = await cursor.toArray();
+            res.send(products);
+        });
+
         app.get('/reviews', async (req, res) => {
             const query = {};
             const cursor = reviewCollection.find(query);
