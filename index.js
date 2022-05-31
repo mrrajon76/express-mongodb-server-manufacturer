@@ -36,6 +36,12 @@ async function run() {
             res.send(reviews);
         });
 
+        app.post('/review', async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
+        });
+
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
             const user = req.body;
