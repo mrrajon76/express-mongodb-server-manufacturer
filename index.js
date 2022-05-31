@@ -38,6 +38,7 @@ async function run() {
         const userCollection = client.db('pc-components-manufacturer').collection('users');
         const orderCollection = client.db('pc-components-manufacturer').collection('orders');
 
+        // Get all products
         app.get('/products', async (req, res) => {
             const query = {};
             const cursor = productCollection.find(query);
@@ -45,6 +46,7 @@ async function run() {
             res.send(products);
         });
 
+        // Get all reviews
         app.get('/reviews', async (req, res) => {
             const query = {};
             const cursor = reviewCollection.find(query);
@@ -52,12 +54,14 @@ async function run() {
             res.send(reviews);
         });
 
-        app.post('/review', async (req, res) => {
+        // Add a review
+        app.post('/review', verifyJWT, async (req, res) => {
             const review = req.body;
             const result = await reviewCollection.insertOne(review);
             res.send(result);
         });
 
+        // Create & update an user
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
             const user = req.body;
@@ -71,6 +75,26 @@ async function run() {
             res.send({ result, token });
         });
 
+        // Create & update an user
+        app.patch('/user/admin/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' }
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+
+        // Get all the user
+        app.get('/users', verifyJWT, async (req, res) => {
+            const query = {};
+            const users = await userCollection.find(query).toArray();
+            res.send(users);
+        });
+
+        // Get a single user details
         app.get('/user/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const decodedEmail = req.decoded.email;
