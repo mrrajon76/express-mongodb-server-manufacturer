@@ -14,6 +14,22 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster-warehouse-manag.bfvdp.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+// JWT verify
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'Unauthorized access' })
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            res.status(403).send({ message: 'Forbidden access' })
+        }
+        req.decoded = decoded;
+        next();
+    });
+}
+
 async function run() {
     try {
         await client.connect();
@@ -55,11 +71,17 @@ async function run() {
             res.send({ result, token });
         });
 
-        app.get('/user/:email', async (req, res) => {
+        app.get('/user/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
-            const filter = { email: email };
-            const result = await userCollection.findOne(filter);
-            res.send(result);
+            const decodedEmail = req.decoded.email;
+            if (decodedEmail === email) {
+                const filter = { email: email };
+                const result = await userCollection.findOne(filter);
+                return res.send(result);
+            }
+            else {
+                return res.status(403).send({ message: 'Forbidden access' })
+            }
         });
     }
     finally { }
