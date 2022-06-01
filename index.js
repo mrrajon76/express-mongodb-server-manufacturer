@@ -68,7 +68,26 @@ async function run() {
             if (requesterAccount.role === 'admin') {
                 const filter = { _id: ObjectId(id) };
                 const result = await productCollection.deleteOne(filter);
-                res.send(result);
+                return res.send(result);
+            }
+            else {
+                return res.status(403).send({ message: 'Forbidden access' });
+            }
+        });
+
+        // Update item stock quantity
+        app.patch('/product/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const newStock = parseInt(req.body.value);
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.role === 'admin') {
+                const filter = { _id: ObjectId(id) };
+                const updateDoc = {
+                    $set: { stock: newStock }
+                };
+                const result = await productCollection.updateOne(filter, updateDoc);
+                return res.send(result);
             }
             else {
                 return res.status(403).send({ message: 'Forbidden access' });
