@@ -60,19 +60,19 @@ async function run() {
             }
         });
 
-        // Get all reviews
-        app.get('/reviews', async (req, res) => {
-            const query = {};
-            const cursor = reviewCollection.find(query);
-            const reviews = await cursor.toArray();
-            res.send(reviews);
-        });
-
-        // Add a review
-        app.post('/review', verifyJWT, async (req, res) => {
-            const review = req.body;
-            const result = await reviewCollection.insertOne(review);
-            res.send(result);
+        // Delete item
+        app.delete('/product/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.role === 'admin') {
+                const filter = { _id: ObjectId(id) };
+                const result = await productCollection.deleteOne(filter);
+                res.send(result);
+            }
+            else {
+                return res.status(403).send({ message: 'Forbidden access' });
+            }
         });
 
         // Create & update an user
@@ -135,6 +135,21 @@ async function run() {
             const user = await userCollection.findOne({ email: email });
             const isAdmin = user.role === 'admin';
             res.send({ admin: isAdmin });
+        });
+
+        // Get all reviews
+        app.get('/reviews', async (req, res) => {
+            const query = {};
+            const cursor = reviewCollection.find(query);
+            const reviews = await cursor.toArray();
+            res.send(reviews);
+        });
+
+        // Add a review
+        app.post('/review', verifyJWT, async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
         });
     }
     finally { }
