@@ -136,6 +136,23 @@ async function run() {
             res.send(result);
         });
 
+        //Delete an order
+        app.delete('/orders/:id', verifyJWT, async (req, res) => {
+            const order = req.params.id;
+            const item = req.body.itemID;
+            const adjustStock = req.body.adjustStock;
+            const adjustSold = req.body.adjustSold;
+            const filter = { _id: ObjectId(order) };
+            const filterItem = { _id: ObjectId(item) };
+            const updateDoc = {
+                $set: { stock: adjustStock, sold: adjustSold }
+            };
+
+            const deleteOrder = await orderCollection.deleteOne(filter);
+            const adjustItem = await productCollection.updateOne(filterItem, updateDoc);
+            res.send({ deleteOrder, adjustItem });
+        });
+
         // Create & update an user
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
