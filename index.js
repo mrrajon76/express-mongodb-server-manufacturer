@@ -52,6 +52,9 @@ async function run() {
             const requesterAccount = await userCollection.findOne({ email: requester });
             if (requesterAccount.role === 'admin') {
                 const item = req.body;
+                item.price = parseFloat(item.price);
+                item.stock = parseInt(item.stock);
+                item.moq = parseInt(item.moq);
                 const result = await productCollection.insertOne(item);
                 return res.send(result);
             }
@@ -92,6 +95,24 @@ async function run() {
             else {
                 return res.status(403).send({ message: 'Forbidden access' });
             }
+        });
+
+        // New order
+        app.post('/order', verifyJWT, async (req, res) => {
+            const order = req.body.formData;
+            const item = order.productID;
+            const newStock = req.body.newStock;
+            const newSold = req.body.newSold;
+            // console.log(order, item, newStock, newSold)
+            const filter = { _id: ObjectId(item) };
+            const updateDoc = {
+                $set: { stock: newStock, sold: newSold }
+            };
+
+            const addOrder = await orderCollection.insertOne(order);
+            const updateProduct = await productCollection.updateOne(filter, updateDoc)
+
+            res.send({ addOrder, updateProduct });
         });
 
         // Create & update an user
