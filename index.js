@@ -97,13 +97,12 @@ async function run() {
             }
         });
 
-        // New order
+        // New order & update item stock, sold field
         app.post('/order', verifyJWT, async (req, res) => {
             const order = req.body.formData;
             const item = order.productID;
             const newStock = req.body.newStock;
             const newSold = req.body.newSold;
-            // console.log(order, item, newStock, newSold)
             const filter = { _id: ObjectId(item) };
             const updateDoc = {
                 $set: { stock: newStock, sold: newSold }
@@ -113,6 +112,28 @@ async function run() {
             const updateProduct = await productCollection.updateOne(filter, updateDoc)
 
             res.send({ addOrder, updateProduct });
+        });
+
+        //Get all orders
+        app.get('/orders', verifyJWT, async (req, res) => {
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.role === 'admin') {
+                const query = {};
+                const result = await orderCollection.find(query).toArray();
+                return res.send(result);
+            }
+            else {
+                return res.status(403).send({ message: 'Forbidden access' });
+            }
+        });
+
+        //Get orders of a specific user
+        app.get('/orders/:email', verifyJWT, async (req, res) => {
+            const user = req.params.email;
+            const filter = { customerEmail: user };
+            const result = await orderCollection.find(filter).toArray();
+            res.send(result);
         });
 
         // Create & update an user
