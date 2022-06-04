@@ -128,6 +128,25 @@ async function run() {
             }
         });
 
+        //Update order status
+        app.patch('/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params;
+            const newStatus = req.body.newStatus;
+            const filter = { _id: ObjectId(id) };
+            const updateDoc = {
+                $set: { status: newStatus }
+            };
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.role === 'admin') {
+                const result = await orderCollection.updateOne(filter, updateDoc);
+                return res.send(result);
+            }
+            else {
+                return res.status(403).send({ message: 'Forbidden access' });
+            }
+        });
+
         //Get orders of a specific user
         app.get('/orders/:email', verifyJWT, async (req, res) => {
             const user = req.params.email;
