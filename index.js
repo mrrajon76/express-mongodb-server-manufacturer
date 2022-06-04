@@ -14,6 +14,9 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster-warehouse-manag.bfvdp.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+// Stripe payment
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 // JWT verify
 function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -37,6 +40,18 @@ async function run() {
         const reviewCollection = client.db('pc-components-manufacturer').collection('reviews');
         const userCollection = client.db('pc-components-manufacturer').collection('users');
         const orderCollection = client.db('pc-components-manufacturer').collection('orders');
+
+        //verify Admin
+        // function verifyAdmin(req, res, next) {
+        //     const requester = req.decoded.email;
+        //     const requesterAccount = await userCollection.findOne({ email: requester });
+        //     if (requesterAccount.role === 'admin') {
+        //         next()
+        //     }
+        //     else {
+        //         return res.status(403).send({ message: 'Forbidden access' });
+        //     }
+        // }
 
         // Get all products
         app.get('/products', async (req, res) => {
@@ -114,6 +129,43 @@ async function run() {
             res.send({ addOrder, updateProduct });
         });
 
+        //Payment API
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const item = req.body;
+            const amount = item.price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: [
+                    "card"
+                ]
+            });
+
+            res.send({ clientSecret: paymentIntent.client_secret, });
+        });
+
+        //Update order after successful payment
+        app.put('/payment/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params;
+            const orderToUpdate = req.body;
+            const newStatus = orderToUpdate.newStatus;
+            const newPaymentStatus = orderToUpdate.newPaymentStatus;
+            const transactionID = orderToUpdate.transactionID;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    status: newStatus,
+                    paymentStatus: newPaymentStatus,
+                    transactionID: transactionID
+                }
+            };
+
+            const result = await orderCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        });
+
         //Get all orders
         app.get('/orders', verifyJWT, async (req, res) => {
             const requester = req.decoded.email;
@@ -126,6 +178,14 @@ async function run() {
             else {
                 return res.status(403).send({ message: 'Forbidden access' });
             }
+        });
+
+        //Get a single order
+        app.get('/payment/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params;
+            const query = { _id: ObjectId(id) };
+            const result = await orderCollection.findOne(query);
+            res.send(result);
         });
 
         //Update order status
