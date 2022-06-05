@@ -41,18 +41,6 @@ async function run() {
         const userCollection = client.db('pc-components-manufacturer').collection('users');
         const orderCollection = client.db('pc-components-manufacturer').collection('orders');
 
-        //verify Admin
-        // function verifyAdmin(req, res, next) {
-        //     const requester = req.decoded.email;
-        //     const requesterAccount = await userCollection.findOne({ email: requester });
-        //     if (requesterAccount.role === 'admin') {
-        //         next()
-        //     }
-        //     else {
-        //         return res.status(403).send({ message: 'Forbidden access' });
-        //     }
-        // }
-
         // Get all products
         app.get('/products', async (req, res) => {
             const query = {};
